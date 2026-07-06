@@ -3,6 +3,7 @@ import AppKit
 import SymairaTheme
 import SymairaToolKit
 import SymscopeFeature
+import SymseekFeature
 
 struct ToolDetailView: View {
     let row: ToolRow
@@ -17,10 +18,14 @@ struct ToolDetailView: View {
 
     /// Embedded feature modules (Module Integration Contract). A tool
     /// appears here once its repo exposes a feature package.
+    // No trailing else on purpose: the builder yields nil for tools
+    // without an embedded module, so the info view renders instead.
     @ViewBuilder
     private var embeddedModule: (some View)? {
         if row.tool.id == "symscope" {
             SymscopeModuleView()
+        } else if row.tool.id == "symseek" {
+            SymseekModuleView()
         }
     }
 

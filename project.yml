@@ -21,8 +21,13 @@ packages:
   # feature package lives in a repo subdirectory, which SPM cannot pin by
   # tag. Before the hub gets CI/releases, scope needs a root-level package
   # or a dedicated tagging scheme.
+  # Symlinked under Modules/ with unique names: SPM derives package
+  # identity from the directory basename, and every tool repo calls its
+  # package dir "client" — two raw ../<repo>/client paths collide.
   SymscopeClient:
-    path: ../symaira-scope/client
+    path: Modules/symscope-client
+  SymseekClient:
+    path: Modules/symseek-client
 
 targets:
   SymairaHub:
@@ -39,6 +44,8 @@ targets:
         product: SymairaUpdateCheck
       - package: SymscopeClient
         product: SymscopeFeature
+      - package: SymseekClient
+        product: SymseekFeature
     sources:
       - path: Sources/HubApp
     entitlements:

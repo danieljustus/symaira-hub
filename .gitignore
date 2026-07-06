@@ -4,3 +4,16 @@
 DerivedData/
 .DS_Store
 build/
+
+# Local agent reports / session state
+.github/coverage/
+.github/prerelease/
+# Local agent reports / session state
+.github/audit/
+.omo/
+.omo/run-continuation/
+.omo/notepads/
+coverage.html
+
+# DEV-STAGE local path dependencies (absolute symlinks, never committed)
+Modules/
