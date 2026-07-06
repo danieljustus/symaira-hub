@@ -9,7 +9,16 @@ struct ToolDetailView: View {
     let row: ToolRow
 
     var body: some View {
-        if row.isInstalled, let module = embeddedModule {
+        if row.isInstalled, let mismatch = schemaMismatch {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    header
+                    upgradeWarningView(expected: mismatch.expected, actual: mismatch.actual)
+                }
+                .padding(28)
+                .frame(maxWidth: 640, alignment: .leading)
+            }
+        } else if row.isInstalled, let module = embeddedModule {
             module
         } else {
             infoView
@@ -27,6 +36,54 @@ struct ToolDetailView: View {
         } else if row.tool.id == "symseek" {
             SymseekModuleView()
         }
+    }
+
+    private var schemaMismatch: (expected: Int, actual: Int)? {
+        guard let detected = row.detected else { return nil }
+        let actual = detected.versionInfo?.schemaVersion ?? 0
+        let expected: Int
+        if row.tool.id == "symscope" {
+            expected = SymscopeModule.expectedSchemaVersion
+        } else if row.tool.id == "symseek" {
+            expected = SymseekModule.expectedSchemaVersion
+        } else {
+            return nil
+        }
+        
+        if actual != 0 && actual != expected {
+            return (expected, actual)
+        }
+        return nil
+    }
+
+    private func upgradeWarningView(expected: Int, actual: Int) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Inkompatible CLI-Version")
+                .font(.headline)
+                .foregroundStyle(SymairaTheme.textPrimary)
+            Text("Das installierte CLI-Tool verwendet Schema-Version \(actual), aber dieses Hub-Modul erwartet Version \(expected).")
+                .foregroundStyle(SymairaTheme.textSecondary)
+            Text("Bitte aktualisiere das CLI-Tool:")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(SymairaTheme.textPrimary)
+            HStack {
+                Text("brew upgrade \(row.tool.homebrewFormula)")
+                    .font(.callout.monospaced())
+                    .foregroundStyle(SymairaTheme.goldPrimary)
+                    .textSelection(.enabled)
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString("brew upgrade \(row.tool.homebrewFormula)", forType: .string)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.plain)
+                .help("Befehl kopieren")
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassmorphicPanel()
     }
 
     private var infoView: some View {
