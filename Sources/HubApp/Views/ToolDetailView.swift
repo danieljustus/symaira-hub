@@ -2,11 +2,29 @@ import SwiftUI
 import AppKit
 import SymairaTheme
 import SymairaToolKit
+import SymscopeFeature
 
 struct ToolDetailView: View {
     let row: ToolRow
 
     var body: some View {
+        if row.isInstalled, let module = embeddedModule {
+            module
+        } else {
+            infoView
+        }
+    }
+
+    /// Embedded feature modules (Module Integration Contract). A tool
+    /// appears here once its repo exposes a feature package.
+    @ViewBuilder
+    private var embeddedModule: (some View)? {
+        if row.tool.id == "symscope" {
+            SymscopeModuleView()
+        }
+    }
+
+    private var infoView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header

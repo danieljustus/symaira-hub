@@ -17,6 +17,12 @@ packages:
   SymairaAppKit:
     url: https://github.com/danieljustus/symaira-appkit
     exactVersion: 0.1.1
+  # DEV-STAGE path dependency (Module Integration Contract): scope's
+  # feature package lives in a repo subdirectory, which SPM cannot pin by
+  # tag. Before the hub gets CI/releases, scope needs a root-level package
+  # or a dedicated tagging scheme.
+  SymscopeClient:
+    path: ../symaira-scope/client
 
 targets:
   SymairaHub:
@@ -31,6 +37,8 @@ targets:
         product: SymairaToolKit
       - package: SymairaAppKit
         product: SymairaUpdateCheck
+      - package: SymscopeClient
+        product: SymscopeFeature
     sources:
       - path: Sources/HubApp
     entitlements:
