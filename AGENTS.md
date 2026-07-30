@@ -11,12 +11,11 @@ product, NOT this hub.
 
 ```bash
 xcodegen generate
-DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
-  xcodebuild -project SymairaHub.xcodeproj -scheme SymairaHub -scmProvider system build
+xcodebuild -project SymairaHub.xcodeproj -scheme SymairaHub build
 ```
 
-- macOS 14+, Swift 6, XcodeGen. `-scmProvider system` is required while the
-  symaira-appkit repo is private (uses system git credentials).
+- macOS 14+, Swift 6, XcodeGen. `symaira-appkit` is public now, so no
+  `-scmProvider system` / system-git-credential workaround is needed.
 
 ## Architecture & Boundaries
 
@@ -37,16 +36,22 @@ Per-tool feature modules are embedded step by step. A tool repo qualifies
 when it provides:
 
 1. an **SPM library package** in its repo (e.g. `symaira-scope/client` →
-   `SymscopeKit` pattern) exposing its views/view-models WITHOUT app entry
+   `SymscopeFeature` pattern) exposing its views/view-models WITHOUT app entry
    point, pinned here via exact version or local `path:` during development
    (merged hub code must reference a tag);
-2. all shared plumbing via symaira-appkit (already true for all 8 clients);
-3. a declared `schema_version` it expects from its CLI (checked via
-   `ToolDetector.requireSchemaVersion`).
+2. all shared plumbing via symaira-appkit;
+3. a declared `expectedSchemaVersion` compared in `ToolDetailView` against
+   the CLI's detected `version --json` schema (inline check, not a
+   `ToolDetector` helper).
 
 The hub then swaps the module placeholder in `ToolDetailView` for the
 package's root view, gated on `row.isInstalled`. Until a tool repo ships
 such a package, its thin standalone dev app remains the reference UI.
+
+Embedded so far: `symscope` (`SymscopeFeature`) and `symseek`
+(`SymseekFeature`), both wired as local `path:` dependencies under
+`Modules/` (gitignored, symlinked locally). Neither is pinned to a tag yet
+— required before merging to a release branch.
 
 ## Distribution (later)
 
