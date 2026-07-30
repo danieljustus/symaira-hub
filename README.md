@@ -1,5 +1,7 @@
 # Symaira Hub
 
+![Symaira Hub social preview](docs/assets/social-preview.png)
+
 The native macOS control center for the [Symaira](https://symaira.com)
 developer tools — one app, composed of modules that light up when the
 matching CLI is installed.
@@ -27,8 +29,8 @@ Requires macOS 14+, Xcode 16+.
 ## Status
 
 Scaffolding: tool detection, dashboard, install tiles. Per-tool feature
-modules are embedded incrementally — see `AGENTS.md` for the integration
-contract.
+modules are embedded incrementally — `symscope` and `symseek` are wired in
+so far — see `AGENTS.md` for the integration contract.
 
 ## License
 
