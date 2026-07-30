@@ -35,11 +35,14 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
       - name: Run SwiftLint
-        run: /opt/homebrew/bin/swiftlint --strict
+        run: swiftlint --strict
 
       - name: Verify SwiftLint version
-        run: /opt/homebrew/bin/swiftlint version
+        run: swiftlint version
 
   build:
     runs-on: macos-14
