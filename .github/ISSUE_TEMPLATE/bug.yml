@@ -1,0 +1,65 @@
+name: Bug Report
+description: File a bug report to help us improve SymairaHub
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug.
+      placeholder: What went wrong?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the bug.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+      placeholder: I expected ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please tell us about your environment.
+      placeholder: |
+        - macOS version: 15.x
+        - Xcode version: 16.x
+        - XcodeGen version: 2.x
+        - SymairaHub version: v0.1.x
+      value: |
+        - macOS version:
+        - Xcode version:
+        - XcodeGen version:
+        - SymairaHub version:
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here — screenshots, logs, etc.
+      placeholder: Add any additional information here.
