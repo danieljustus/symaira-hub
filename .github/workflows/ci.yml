@@ -24,6 +24,7 @@ jobs:
 
       - name: Set up module repositories
         run: |
+          mkdir -p Modules
           git clone --depth 1 https://github.com/danieljustus/symaira-scope.git /tmp/symscope
           rm -f Modules/symscope-client
           ln -sf /tmp/symscope/client Modules/symscope-client
@@ -32,7 +33,7 @@ jobs:
           ln -sf /tmp/symseek/client Modules/symseek-client
 
       - name: Generate Xcode project
-        run: mkdir -p Modules && xcodegen generate
+        run: xcodegen generate
 
       - name: Run SwiftLint
         run: /opt/homebrew/bin/swiftlint --strict
@@ -51,6 +52,7 @@ jobs:
 
       - name: Set up module repositories
         run: |
+          mkdir -p Modules
           git clone --depth 1 https://github.com/danieljustus/symaira-scope.git /tmp/symscope
           rm -f Modules/symscope-client
           ln -sf /tmp/symscope/client Modules/symscope-client
@@ -59,7 +61,7 @@ jobs:
           ln -sf /tmp/symseek/client Modules/symseek-client
 
       - name: Generate Xcode project
-        run: mkdir -p Modules && xcodegen generate
+        run: xcodegen generate
 
       - name: Build
         run: xcodebuild -project SymairaHub.xcodeproj -scheme SymairaHub build
