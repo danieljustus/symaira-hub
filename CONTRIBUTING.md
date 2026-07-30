@@ -82,6 +82,10 @@ xcodebuild -project SymairaHub.xcodeproj -scheme SymairaHub test
    before a PR can be merged.
 5. **Keep your branch up to date** — rebase or merge `main` into your
    branch if there are conflicts.
+6. **Merge strategy — squash-only.** All pull requests are merged with
+   "Squash and merge". This keeps `main`'s history one commit per PR,
+   regardless of how many commits a branch accumulated during review. Do
+   not use "Create a merge commit" or "Rebase and merge".
 
 ## Review Expectations
 
