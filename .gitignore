@@ -17,3 +17,6 @@ coverage.html
 
 # DEV-STAGE local path dependencies (absolute symlinks, never committed)
 Modules/
+
+# Agent worktrees (created by sweep coordinators)
+.worktrees/
