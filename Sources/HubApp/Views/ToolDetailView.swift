@@ -50,7 +50,6 @@ struct ToolDetailView: View {
             return nil
         }
 
-
         if actual != 0 && actual != expected {
             return (expected, actual)
         }
