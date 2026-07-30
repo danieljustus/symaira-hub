@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   lint:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v7
 
@@ -41,7 +41,7 @@ jobs:
         run: /opt/homebrew/bin/swiftlint version
 
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
     needs: lint
     steps:
       - uses: actions/checkout@v7
