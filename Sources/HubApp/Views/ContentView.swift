@@ -9,6 +9,16 @@ struct ContentView: View {
         @Bindable var state = state
         NavigationSplitView {
             List(selection: $state.selectedToolID) {
+                // Source inspector section
+                if state.pendingSourceCount > 0 {
+                    Section {
+                        SourceInspectorRow()
+                            .tag("__source_inspector__")
+                    } header: {
+                        Text("Sources")
+                    }
+                }
+
                 Section("Installiert (\(state.installedCount))") {
                     ForEach(state.rows.filter(\.isInstalled)) { row in
                         ToolRowView(row: row).tag(row.id)
@@ -41,7 +51,9 @@ struct ContentView: View {
             ZStack {
                 SymairaTheme.bgDark.ignoresSafeArea()
                 AmbientGlows()
-                if let row = state.selectedRow {
+                if state.selectedToolID == "__source_inspector__" {
+                    SourceInspectorView()
+                } else if let row = state.selectedRow {
                     ToolDetailView(row: row)
                 } else {
                     Text("Tool auswählen")
@@ -50,6 +62,27 @@ struct ContentView: View {
             }
         }
         .navigationTitle("Symaira Hub")
+    }
+}
+
+/// Sidebar row for the source inspector, with a pending count badge.
+struct SourceInspectorRow: View {
+    @Environment(HubState.self) private var state
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkle.magnifyingglass")
+                .foregroundStyle(SymairaTheme.goldPrimary)
+            Text("Pending Sources")
+            Spacer()
+            Text("\(state.pendingSourceCount)")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.black)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(SymairaTheme.goldPrimary)
+                .clipShape(Capsule())
+        }
     }
 }
 
