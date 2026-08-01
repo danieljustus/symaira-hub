@@ -36,8 +36,14 @@ final class HubState {
     private(set) var sourceScanError: String?
     let decisionStore = SourceDecisionStore()
 
-    /// Mock adapter during development; swap for real adapter in #26/#27.
-    private let discoveryAdapter: SourceDiscoveryAdapter = MockDiscoveryAdapter()
+    /// Real CLI adapters. Missing tools are handled as empty discovery results
+    /// by the composite, so installation remains optional.
+    private let discoveryAdapter: SourceDiscoveryAdapter = CompositeDiscoveryAdapter(
+        adapters: [
+            SymmemoryDiscoveryAdapter(),
+            SymskillsDiscoveryAdapter()
+        ]
+    )
 
     var selectedRow: ToolRow? {
         rows.first { $0.id == selectedToolID }
