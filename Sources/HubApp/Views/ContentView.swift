@@ -76,7 +76,7 @@ struct SourceInspectorRow: View {
             Text("Pending Sources")
             Spacer()
             Text("\(state.pendingSourceCount)")
-                .font(.caption.monospacedDigit())
+                .symairaText(.monoSmall, respectsForeground: false)
                 .foregroundStyle(.black)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -91,15 +91,16 @@ struct ToolRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(row.isInstalled ? SymairaTheme.goldPrimary : SymairaTheme.textMuted.opacity(0.4))
-                .frame(width: 8, height: 8)
             Text(row.tool.displayName)
+                .symairaText(.body)
             Spacer()
+            SymairaStatusLabel(
+                row.isInstalled ? "Installed" : "Available",
+                tone: row.isInstalled ? .positive : .neutral
+            )
             if let version = row.detected?.versionInfo?.version {
                 Text(version)
-                    .font(.caption2.monospaced())
-                    .foregroundStyle(SymairaTheme.textMuted)
+                    .symairaText(.monoSmall)
             }
         }
     }
@@ -109,13 +110,23 @@ struct SettingsView: View {
     @Environment(HubState.self) private var state
 
     var body: some View {
-        Form {
-            LabeledContent("Erkannte Tools", value: "\(state.installedCount) von \(state.rows.count)")
-            if let last = state.lastRefresh {
-                LabeledContent("Letzte Erkennung", value: last.formatted(date: .omitted, time: .standard))
+        VStack(alignment: .leading, spacing: 20) {
+            SymairaFormSection("Hub", footer: "Tools werden beim Start und bei jeder Aktualisierung erkannt.") {
+                SymairaFormRow("Erkannte Tools") {
+                    Text("\(state.installedCount) von \(state.rows.count)")
+                        .symairaText(.bodyEmphasized)
+                }
+
+                if let last = state.lastRefresh {
+                    SymairaFormDivider()
+                    SymairaFormRow("Letzte Erkennung") {
+                        Text(last.formatted(date: .omitted, time: .standard))
+                            .symairaText(.monoSmall)
+                    }
+                }
             }
         }
         .padding(20)
-        .frame(width: 360)
+        .frame(width: 420)
     }
 }

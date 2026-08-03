@@ -37,8 +37,7 @@ struct SourceInspectorView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Sources")
-                    .font(.largeTitle.weight(.semibold))
-                    .foregroundStyle(SymairaTheme.textPrimary)
+                    .symairaText(.display)
                 Spacer()
                 Button {
                     Task { await state.refreshSources() }
@@ -50,22 +49,20 @@ struct SourceInspectorView: View {
             }
             Text("Pending source candidates discovered by installed tools. "
                  + "Choose Add, Ignore, or Review later for each.")
-                .font(.callout)
-                .foregroundStyle(SymairaTheme.textMuted)
+                .symairaText(.secondary)
         }
     }
 
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "sparkle.magnifyingglass")
-                .font(.system(size: 40))
+                .symairaText(.display, respectsForeground: false)
                 .foregroundStyle(SymairaTheme.textMuted)
             Text("No new sources found")
-                .font(.title2)
-                .foregroundStyle(SymairaTheme.textPrimary)
+                .symairaText(.title)
             Text("Sources discovered by installed tools will appear here. "
                  + "Click the refresh button to scan again.")
-                .foregroundStyle(SymairaTheme.textMuted)
+                .symairaText(.secondary)
                 .multilineTextAlignment(.center)
             Button("Scan Now") {
                 Task { await state.refreshSources() }
@@ -80,8 +77,7 @@ struct SourceInspectorView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(SymairaTheme.goldPrimary)
             Text(message)
-                .font(.callout)
-                .foregroundStyle(SymairaTheme.textSecondary)
+                .symairaText(.secondary)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -94,20 +90,19 @@ struct SourceInspectorView: View {
             Divider().overlay(SymairaTheme.textMuted.opacity(0.2))
             HStack {
                 Text("Ignored Sources")
-                    .font(.headline)
+                    .symairaText(.subheading, respectsForeground: false)
                     .foregroundStyle(SymairaTheme.textMuted)
                 Spacer()
                 Button("Reset All") {
                     state.resetIgnoredSources()
                 }
                 .buttonStyle(.plain)
+                .symairaText(.callout, respectsForeground: false)
                 .foregroundStyle(SymairaTheme.goldPrimary)
-                .font(.callout)
             }
             Text("Ignored sources are hidden from future scans. "
                  + "Reset to make them visible again.")
-                .font(.caption)
-                .foregroundStyle(SymairaTheme.textMuted)
+                .symairaText(.caption)
         }
     }
 }
@@ -124,14 +119,12 @@ struct SourceCandidateCard: View {
         VStack(alignment: .leading, spacing: 10) {
             // Header row
             HStack {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-                Text(candidate.source.displayName)
-                    .font(.headline)
-                    .foregroundStyle(SymairaTheme.textPrimary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(candidate.source.displayName)
+                        .symairaText(.subheading)
+                    SymairaStatusLabel(decisionLabel, tone: decisionTone)
+                }
                 Spacer()
-                decisionBadge
             }
 
             // Metadata
@@ -180,7 +173,7 @@ struct SourceCandidateCard: View {
             showAddConfirmation = true
         } label: {
             Label("Add", systemImage: "plus.circle.fill")
-                .font(.callout.weight(.medium))
+                .symairaText(.bodyEmphasized, respectsForeground: false)
         }
         .buttonStyle(.borderedProminent)
         .tint(SymairaTheme.goldPrimary)
@@ -191,7 +184,7 @@ struct SourceCandidateCard: View {
             state.ignoreSource(candidate)
         } label: {
             Label("Ignore", systemImage: "eye.slash")
-                .font(.callout)
+                .symairaText(.callout, respectsForeground: false)
         }
         .buttonStyle(.bordered)
     }
@@ -201,38 +194,26 @@ struct SourceCandidateCard: View {
             state.snoozeSource(candidate)
         } label: {
             Label("Later", systemImage: "clock")
-                .font(.callout)
+                .symairaText(.callout, respectsForeground: false)
         }
         .buttonStyle(.bordered)
     }
 
-    private var decisionBadge: some View {
-        Group {
-            switch candidate.decision {
-            case .approved:
-                Label("Added", systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            case .ignored:
-                Label("Ignored", systemImage: "eye.slash.fill")
-                    .font(.caption)
-                    .foregroundStyle(SymairaTheme.textMuted)
-            case .snoozed:
-                Label("Snoozed", systemImage: "clock.fill")
-                    .font(.caption)
-                    .foregroundStyle(SymairaTheme.goldPrimary)
-            case .pending:
-                EmptyView()
-            }
+    private var decisionLabel: String {
+        switch candidate.decision {
+        case .approved: return "Added"
+        case .ignored: return "Ignored"
+        case .snoozed: return "Snoozed"
+        case .pending: return "Pending"
         }
     }
 
-    private var statusColor: Color {
+    private var decisionTone: SymairaTone {
         switch candidate.decision {
-        case .pending: return SymairaTheme.goldPrimary
-        case .approved: return .green
-        case .ignored: return SymairaTheme.textMuted.opacity(0.4)
-        case .snoozed: return .orange
+        case .pending: return .warning
+        case .approved: return .positive
+        case .ignored: return .neutral
+        case .snoozed: return .informative
         }
     }
 
@@ -240,11 +221,9 @@ struct SourceCandidateCard: View {
         HStack(alignment: .firstTextBaseline) {
             Text(label)
                 .frame(width: 90, alignment: .leading)
-                .foregroundStyle(SymairaTheme.textMuted)
-                .font(.caption)
+                .symairaText(.caption)
             Text(value)
-                .font(.caption.monospaced())
-                .foregroundStyle(SymairaTheme.textSecondary)
+                .symairaText(.monoSmall)
                 .textSelection(.enabled)
         }
     }
