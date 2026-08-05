@@ -24,9 +24,11 @@ matching CLI is installed.
 
 **Download from [Releases](https://github.com/danieljustus/symaira-hub/releases)**
 — grab the latest `SymairaHub-<version>.dmg`, open it, and drag the app to
-Applications.
+Applications — or install with Homebrew:
 
-> A Homebrew cask (`brew install danieljustus/tap/symhub`) is planned.
+```bash
+brew install danieljustus/tap/symhub
+```
 
 ## Usage
 
