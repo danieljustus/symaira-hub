@@ -59,8 +59,7 @@ final class SourceDecisionStore {
 
     /// Reset a single source back to pending.
     func resetDecision(for sourceID: String) {
-        storage.removeValue(forKey: sourceID)
-        save()
+        setDecision(.pending, for: sourceID)
     }
 
     // MARK: - Persistence
