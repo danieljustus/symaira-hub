@@ -9,22 +9,22 @@ struct ContentView: View {
         @Bindable var state = state
         NavigationSplitView {
             List(selection: $state.selectedToolID) {
-                // Source inspector section
-                if state.pendingSourceCount > 0 {
-                    Section {
-                        SourceInspectorRow()
-                            .tag("__source_inspector__")
-                    } header: {
-                        Text("Sources")
-                    }
+                // Source inspector section — always rendered so ignored
+                // sources stay resettable and scan errors stay visible even
+                // when no sources are pending.
+                Section {
+                    SourceInspectorRow()
+                        .tag("__source_inspector__")
+                } header: {
+                    Text("Sources")
                 }
 
-                Section("Installiert (\(state.installedCount))") {
+                Section("Installed (\(state.installedCount))") {
                     ForEach(state.rows.filter(\.isInstalled)) { row in
                         ToolRowView(row: row).tag(row.id)
                     }
                 }
-                Section("Verfügbar") {
+                Section("Available") {
                     ForEach(state.rows.filter { !$0.isInstalled }) { row in
                         ToolRowView(row: row).tag(row.id)
                     }
@@ -43,7 +43,7 @@ struct ContentView: View {
                             Image(systemName: "arrow.clockwise")
                         }
                     }
-                    .help("Tools neu erkennen")
+                    .help("Rescan tools")
                     .disabled(state.isRefreshing)
                 }
             }
@@ -56,7 +56,7 @@ struct ContentView: View {
                 } else if let row = state.selectedRow {
                     ToolDetailView(row: row)
                 } else {
-                    Text("Tool auswählen")
+                    Text("Select a tool")
                         .foregroundStyle(SymairaTheme.textMuted)
                 }
             }
@@ -75,13 +75,15 @@ struct SourceInspectorRow: View {
                 .foregroundStyle(SymairaTheme.goldPrimary)
             Text("Pending Sources")
             Spacer()
-            Text("\(state.pendingSourceCount)")
-                .symairaText(.monoSmall, respectsForeground: false)
-                .foregroundStyle(.black)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(SymairaTheme.goldPrimary)
-                .clipShape(Capsule())
+            if state.pendingSourceCount > 0 {
+                Text("\\(state.pendingSourceCount)")
+                    .symairaText(.monoSmall, respectsForeground: false)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(SymairaTheme.goldPrimary)
+                    .clipShape(Capsule())
+            }
         }
     }
 }
@@ -111,15 +113,15 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            SymairaFormSection("Hub", footer: "Tools werden beim Start und bei jeder Aktualisierung erkannt.") {
-                SymairaFormRow("Erkannte Tools") {
-                    Text("\(state.installedCount) von \(state.rows.count)")
+            SymairaFormSection("Hub", footer: "Tools are detected at launch and on every refresh.") {
+                SymairaFormRow("Detected Tools") {
+                    Text("\(state.installedCount) of \(state.rows.count)")
                         .symairaText(.bodyEmphasized)
                 }
 
                 if let last = state.lastRefresh {
                     SymairaFormDivider()
-                    SymairaFormRow("Letzte Erkennung") {
+                    SymairaFormRow("Last Scan") {
                         Text(last.formatted(date: .omitted, time: .standard))
                             .symairaText(.monoSmall)
                     }

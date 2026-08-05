@@ -29,21 +29,31 @@ final class HubState {
 
     var selectedToolID: String?
 
-    private let detector = ToolDetector()
+    private let detector: ToolDetector
 
     // Source inspector state
     private(set) var sourceCandidates: [SourceCandidate] = []
     private(set) var sourceScanError: String?
-    let decisionStore = SourceDecisionStore()
+    let decisionStore: SourceDecisionStore
 
     /// Real CLI adapters. Missing tools are handled as empty discovery results
     /// by the composite, so installation remains optional.
-    private let discoveryAdapter: SourceDiscoveryAdapter = CompositeDiscoveryAdapter(
-        adapters: [
-            SymmemoryDiscoveryAdapter(),
-            SymskillsDiscoveryAdapter()
-        ]
-    )
+    private let discoveryAdapter: SourceDiscoveryAdapter
+
+    init(
+        decisionStore: SourceDecisionStore = SourceDecisionStore(),
+        discoveryAdapter: SourceDiscoveryAdapter = CompositeDiscoveryAdapter(
+            adapters: [
+                SymmemoryDiscoveryAdapter(),
+                SymskillsDiscoveryAdapter()
+            ]
+        ),
+        detector: ToolDetector = ToolDetector()
+    ) {
+        self.decisionStore = decisionStore
+        self.discoveryAdapter = discoveryAdapter
+        self.detector = detector
+    }
 
     var selectedRow: ToolRow? {
         rows.first { $0.id == selectedToolID }
@@ -65,11 +75,20 @@ final class HubState {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        // Tool detection (existing)
+        // Tool detection — concurrent: results are independent per tool,
+        // so refresh stalls for the slowest spawn instead of the sum of
+        // all spawns. The sort afterwards keeps the order deterministic.
+        let detector = self.detector
         var newRows: [ToolRow] = []
-        for tool in SymairaToolRegistry.all {
-            let detected = await detector.detect(tool)
-            newRows.append(ToolRow(tool: tool, detected: detected))
+        await withTaskGroup(of: (tool: SymairaTool, detected: DetectedTool?).self) { group in
+            for tool in SymairaToolRegistry.all {
+                group.addTask {
+                    (tool, await detector.detect(tool))
+                }
+            }
+            for await (tool, detected) in group {
+                newRows.append(ToolRow(tool: tool, detected: detected))
+            }
         }
         rows = newRows.sorted {
             if $0.isInstalled != $1.isInstalled { return $0.isInstalled }
@@ -90,7 +109,10 @@ final class HubState {
     func refreshSources() async {
         sourceScanError = nil
 
-        let rawSources: [DiscoveredSource]
+        // Snooze is temporary: a snoozed source hides for this session and
+        // reappears as pending on the next scan.
+        decisionStore.expireSnoozed()
+
         do {
             rawSources = try await withTimeout(seconds: 10) {
                 try await self.discoveryAdapter.discover()
@@ -100,51 +122,55 @@ final class HubState {
             rawSources = []
         }
 
-        let ignoredIDs = decisionStore.ignoredSourceIDs
-        sourceCandidates = rawSources
-            .filter { !ignoredIDs.contains($0.sourceID) }
-            .map { SourceCandidate(source: $0, decision: decisionStore.decision(for: $0.sourceID)) }
+        applyDecisions()
     }
 
     /// Approve a source: mark it as approved for import.
     func approveSource(_ candidate: SourceCandidate) {
         decisionStore.setDecision(.approved, for: candidate.source.id)
-        refreshCandidates()
+        applyDecisions()
     }
 
     /// Ignore a source: suppress it on all future scans.
     func ignoreSource(_ candidate: SourceCandidate) {
         decisionStore.setDecision(.ignored, for: candidate.source.id)
-        refreshCandidates()
+        applyDecisions()
     }
 
     /// Snooze a source: hide it for now, but let it reappear on next scan.
     func snoozeSource(_ candidate: SourceCandidate) {
         decisionStore.setDecision(.snoozed, for: candidate.source.id)
-        refreshCandidates()
+        applyDecisions()
     }
 
     /// Reset all ignored sources back to pending.
     func resetIgnoredSources() {
         decisionStore.resetIgnored()
-        // Rebuild candidates — previously ignored sources now show up again
-        refreshCandidates()
+        // Rebuild candidates from the raw scan result — previously ignored
+        // sources show up again immediately, no re-scan required.
+        applyDecisions()
     }
 
     /// Reset a single decision back to pending.
     func resetDecision(for sourceID: String) {
         decisionStore.resetDecision(for: sourceID)
-        refreshCandidates()
+        applyDecisions()
     }
 
     // MARK: - Private
 
-    private func refreshCandidates() {
+    /// Last raw discovery result. Kept so decision changes (reset, reset
+    /// all) can rebuild the visible candidates without another scan.
+    private var rawSources: [DiscoveredSource] = []
+
+    /// Derive the visible candidates from the raw scan result and the
+    /// persisted decisions.
+    private func applyDecisions() {
         let ignoredIDs = decisionStore.ignoredSourceIDs
-        sourceCandidates = sourceCandidates.map { candidate in
-            let decision = decisionStore.decision(for: candidate.source.id)
-            return SourceCandidate(source: candidate.source, decision: decision)
-        }.filter { !ignoredIDs.contains($0.source.id) }
+        let snoozedIDs = decisionStore.snoozedSourceIDs
+        sourceCandidates = rawSources
+            .map { SourceCandidate(source: $0, decision: decisionStore.decision(for: $0.sourceID)) }
+            .filter { !ignoredIDs.contains($0.source.id) && !snoozedIDs.contains($0.source.id) }
     }
 }
 
