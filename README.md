@@ -2,6 +2,10 @@
 
 ![Symaira Hub social preview](docs/assets/social-preview.png)
 
+[![CI](https://github.com/danieljustus/symaira-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/danieljustus/symaira-hub/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/danieljustus/symaira-hub)](https://github.com/danieljustus/symaira-hub/releases)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+
 The native macOS control center for the [Symaira](https://symaira.com)
 developer tools — one app, composed of modules that light up when the
 matching CLI is installed.
