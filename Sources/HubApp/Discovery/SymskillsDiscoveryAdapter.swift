@@ -1,12 +1,15 @@
 import Foundation
+import SymairaCLIRunner
 
 /// Adapter that calls `symskills discover --json` and maps the output
 /// to the Source Discovery Contract v1 format.
 actor SymskillsDiscoveryAdapter: SourceDiscoveryAdapter {
     private let binaryPath: String
+    private let runner: CLIRunner
 
-    init(binaryPath: String = "/opt/homebrew/bin/symskills") {
+    init(binaryPath: String = "/opt/homebrew/bin/symskills", runner: CLIRunner = CLIRunner()) {
         self.binaryPath = binaryPath
+        self.runner = runner
     }
 
     func discover() async throws -> [DiscoveredSource] {
@@ -16,34 +19,26 @@ actor SymskillsDiscoveryAdapter: SourceDiscoveryAdapter {
     }
 
     /// Run `symskills discover --json` and return stdout data.
+    /// Uses the shared `CLIRunner`, which terminates the subprocess on task
+    /// cancellation, so a hung binary cannot leak across refreshes.
     private func runSymskillsDiscover() async throws -> Data {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: binaryPath)
-        process.arguments = ["discover", "--json"]
-        process.qualityOfService = .userInitiated
-
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        return try await withCheckedThrowingContinuation { continuation in
-            process.terminationHandler = { proc in
-                guard proc.terminationStatus == 0 else {
-                    let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                    let message = String(data: errData, encoding: .utf8) ?? "unknown error"
-                    continuation.resume(throwing: DiscoveryError.invalidResponse(message))
-                    return
-                }
-                let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                continuation.resume(returning: data)
+        do {
+            return try await runner.runChecked(
+                URL(fileURLWithPath: binaryPath),
+                arguments: ["discover", "--json"]
+            )
+        } catch let error as CLIRunnerError {
+            switch error {
+            case .executionFailed(_, let stderr):
+                throw DiscoveryError.invalidResponse(stderr)
+            case .timeout(let seconds):
+                throw DiscoveryError.timeout("symskills (\(Int(seconds))s)")
+            default:
+                throw DiscoveryError.toolUnavailable("symskills")
             }
-
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(throwing: DiscoveryError.toolUnavailable("symskills"))
-            }
+        } catch {
+            // Binary missing or not executable.
+            throw DiscoveryError.toolUnavailable("symskills")
         }
     }
 }
