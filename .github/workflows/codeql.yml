@@ -27,22 +27,43 @@ jobs:
       matrix:
         include:
           - language: swift
-            build-mode: autobuild
+            build-mode: manual
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v4.37.4
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
-      - name: Autobuild
-        if: matrix.build-mode == 'autobuild'
-        uses: github/codeql-action/autobuild@v4
+      - name: Set up module repositories
+        if: matrix.language == 'swift'
+        run: |
+          mkdir -p Modules
+          git clone --depth 1 https://github.com/danieljustus/symaira-scope.git /tmp/symscope
+          rm -f Modules/symscope-client
+          ln -sf /tmp/symscope/client Modules/symscope-client
+          git clone --depth 1 https://github.com/danieljustus/symaira-seek.git /tmp/symseek
+          rm -f Modules/symseek-client
+          ln -sf /tmp/symseek/client Modules/symseek-client
+
+      - name: Generate Xcode project
+        if: matrix.language == 'swift'
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            curl -sL https://github.com/yonaskolb/XcodeGen/releases/download/2.45.4/xcodegen.zip -o /tmp/xcodegen.zip
+            unzip -q /tmp/xcodegen.zip -d /tmp/xcodegen
+            export PATH="/tmp/xcodegen/xcodegen/bin:$PATH"
+          fi
+          xcodegen generate
+
+      - name: Build
+        if: matrix.language == 'swift'
+        run: xcodebuild build -project SymairaHub.xcodeproj -scheme SymairaHub -configuration Debug CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v4.37.4
         with:
           category: "/language:${{ matrix.language }}"
