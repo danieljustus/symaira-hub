@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build and publish (e.g. 0.2.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,12 +24,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine version from tag
+      - name: Determine version from tag or input
         id: version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Import signing certificate
         id: signing
@@ -57,32 +67,14 @@ jobs:
           echo "CERT_IDENTITY=$CERT_IDENTITY" >> "$GITHUB_ENV"
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
-      - name: Configure git credentials for private SPM dependencies
-        env:
-          APPKIT_GITHUB_TOKEN: ${{ secrets.APPKIT_GITHUB_TOKEN }}
-        run: |
-          if [ -z "${APPKIT_GITHUB_TOKEN:-}" ]; then
-            echo "::warning::APPKIT_GITHUB_TOKEN secret is not set. SPM resolution of private symaira-appkit will fail."
-            exit 0
-          fi
-          git config --global "http.https://github.com/.extraheader" \
-            "AUTHORIZATION: basic $(echo -n "x-access-token:${APPKIT_GITHUB_TOKEN}" | base64)"
-
-      - name: Set up module repositories
-        run: |
-          mkdir -p Modules
-          git clone --depth 1 https://github.com/danieljustus/symaira-scope.git /tmp/symscope
-          rm -f Modules/symscope-client
-          ln -sf /tmp/symscope/client Modules/symscope-client
-          git clone --depth 1 https://github.com/danieljustus/symaira-seek.git /tmp/symseek
-          rm -f Modules/symseek-client
-          ln -sf /tmp/symseek/client Modules/symseek-client
-
       - name: Install XcodeGen
-        run: brew install xcodegen 2>/dev/null || brew upgrade xcodegen 2>/dev/null || true
-
-      - name: Generate Xcode project
-        run: xcodegen generate
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            curl -sL https://github.com/yonaskolb/XcodeGen/releases/download/2.45.4/xcodegen.zip -o /tmp/xcodegen.zip
+            unzip -q /tmp/xcodegen.zip -d /tmp/xcodegen
+            export PATH="/tmp/xcodegen/xcodegen/bin:$PATH"
+          fi
+          xcodegen generate
 
       - name: Resolve Swift package dependencies
         run: |
@@ -229,4 +221,3 @@ jobs:
           if [ -n "${KEYCHAIN_PATH:-}" ] && [ -f "$KEYCHAIN_PATH" ]; then
             security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
           fi
-          git config --global --unset-all "http.https://github.com/.extraheader" 2>/dev/null || true
