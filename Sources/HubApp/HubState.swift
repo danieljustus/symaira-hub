@@ -75,11 +75,20 @@ final class HubState {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        // Tool detection (existing)
+        // Tool detection — concurrent: results are independent per tool,
+        // so refresh stalls for the slowest spawn instead of the sum of
+        // all spawns. The sort afterwards keeps the order deterministic.
+        let detector = self.detector
         var newRows: [ToolRow] = []
-        for tool in SymairaToolRegistry.all {
-            let detected = await detector.detect(tool)
-            newRows.append(ToolRow(tool: tool, detected: detected))
+        await withTaskGroup(of: (tool: SymairaTool, detected: DetectedTool?).self) { group in
+            for tool in SymairaToolRegistry.all {
+                group.addTask {
+                    (tool, await detector.detect(tool))
+                }
+            }
+            for await (tool, detected) in group {
+                newRows.append(ToolRow(tool: tool, detected: detected))
+            }
         }
         rows = newRows.sorted {
             if $0.isInstalled != $1.isInstalled { return $0.isInstalled }
