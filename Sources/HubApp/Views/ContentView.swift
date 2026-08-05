@@ -9,14 +9,14 @@ struct ContentView: View {
         @Bindable var state = state
         NavigationSplitView {
             List(selection: $state.selectedToolID) {
-                // Source inspector section
-                if state.pendingSourceCount > 0 {
-                    Section {
-                        SourceInspectorRow()
-                            .tag("__source_inspector__")
-                    } header: {
-                        Text("Sources")
-                    }
+                // Source inspector section — always rendered so ignored
+                // sources stay resettable and scan errors stay visible even
+                // when no sources are pending.
+                Section {
+                    SourceInspectorRow()
+                        .tag("__source_inspector__")
+                } header: {
+                    Text("Sources")
                 }
 
                 Section("Installed (\(state.installedCount))") {
@@ -75,13 +75,15 @@ struct SourceInspectorRow: View {
                 .foregroundStyle(SymairaTheme.goldPrimary)
             Text("Pending Sources")
             Spacer()
-            Text("\(state.pendingSourceCount)")
-                .symairaText(.monoSmall, respectsForeground: false)
-                .foregroundStyle(.black)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(SymairaTheme.goldPrimary)
-                .clipShape(Capsule())
+            if state.pendingSourceCount > 0 {
+                Text("\\(state.pendingSourceCount)")
+                    .symairaText(.monoSmall, respectsForeground: false)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(SymairaTheme.goldPrimary)
+                    .clipShape(Capsule())
+            }
         }
     }
 }

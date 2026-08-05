@@ -23,7 +23,11 @@ struct SourceInspectorView: View {
                         SourceCandidateCard(candidate: candidate)
                     }
 
-                    if !state.sourceCandidates.isEmpty {
+                    // Show the ignored-source management section whenever
+                    // ignored sources exist — including when every candidate
+                    // has been handled and none are pending — so Reset All
+                    // stays reachable.
+                    if !state.decisionStore.ignoredSourceIDs.isEmpty {
                         ignoredSection
                     }
                 }
