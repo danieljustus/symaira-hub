@@ -10,6 +10,7 @@ build/
 .github/prerelease/
 # Local agent reports / session state
 .github/audit/
+.github/review/
 .omo/
 .omo/run-continuation/
 .omo/notepads/
