@@ -100,6 +100,10 @@ final class HubState {
     func refreshSources() async {
         sourceScanError = nil
 
+        // Snooze is temporary: a snoozed source hides for this session and
+        // reappears as pending on the next scan.
+        decisionStore.expireSnoozed()
+
         let rawSources: [DiscoveredSource]
         do {
             rawSources = try await withTimeout(seconds: 10) {
@@ -151,10 +155,12 @@ final class HubState {
 
     private func refreshCandidates() {
         let ignoredIDs = decisionStore.ignoredSourceIDs
+        let snoozedIDs = decisionStore.snoozedSourceIDs
         sourceCandidates = sourceCandidates.map { candidate in
             let decision = decisionStore.decision(for: candidate.source.id)
             return SourceCandidate(source: candidate.source, decision: decision)
-        }.filter { !ignoredIDs.contains($0.source.id) }
+        }
+        .filter { !ignoredIDs.contains($0.source.id) && !snoozedIDs.contains($0.source.id) }
     }
 }
 
