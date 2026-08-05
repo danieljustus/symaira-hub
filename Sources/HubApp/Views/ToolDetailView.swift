@@ -59,17 +59,15 @@ struct ToolDetailView: View {
     private func upgradeWarningView(expected: Int, actual: Int) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Inkompatible CLI-Version")
-                .font(.headline)
-                .foregroundStyle(SymairaTheme.textPrimary)
+                .symairaText(.subheading)
             Text("Das installierte CLI-Tool verwendet Schema-Version "
                  + "\\(actual), aber dieses Hub-Modul erwartet Version \\(expected).")
-                .foregroundStyle(SymairaTheme.textSecondary)
+                .symairaText(.secondary)
             Text("Bitte aktualisiere das CLI-Tool:")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(SymairaTheme.textPrimary)
+                .symairaText(.subheading)
             HStack {
                 Text("brew upgrade \(row.tool.homebrewFormula)")
-                    .font(.callout.monospaced())
+                    .symairaText(.monoSmall, respectsForeground: false)
                     .foregroundStyle(SymairaTheme.goldPrimary)
                     .textSelection(.enabled)
                 Button {
@@ -107,11 +105,9 @@ struct ToolDetailView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(row.tool.displayName)
-                .font(.largeTitle.weight(.semibold))
-                .foregroundStyle(SymairaTheme.textPrimary)
+                .symairaText(.display)
             Text(row.tool.binaryName)
-                .font(.callout.monospaced())
-                .foregroundStyle(SymairaTheme.textMuted)
+                .symairaText(.monoSmall)
         }
     }
 
@@ -133,13 +129,12 @@ struct ToolDetailView: View {
     private var installCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Nicht installiert")
-                .font(.headline)
-                .foregroundStyle(SymairaTheme.textPrimary)
+                .symairaText(.subheading)
             Text("Dieses Modul erscheint automatisch, sobald das CLI installiert ist.")
-                .foregroundStyle(SymairaTheme.textSecondary)
+                .symairaText(.secondary)
             HStack {
                 Text("brew install \(row.tool.homebrewFormula)")
-                    .font(.callout.monospaced())
+                    .symairaText(.monoSmall, respectsForeground: false)
                     .foregroundStyle(SymairaTheme.goldPrimary)
                     .textSelection(.enabled)
                 Button {
@@ -160,12 +155,11 @@ struct ToolDetailView: View {
     private var modulePlaceholder: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Modul")
-                .font(.headline)
-                .foregroundStyle(SymairaTheme.textPrimary)
-            Text("Das Feature-Modul für \\(row.tool.displayName) ist noch nicht "
+                .symairaText(.subheading)
+            Text("Das Feature-Modul für \(row.tool.displayName) ist noch nicht "
                  + "in den Hub eingebettet. Integrationsvertrag: "
                  + "siehe AGENTS.md (\"Module Integration Contract\").")
-                .foregroundStyle(SymairaTheme.textSecondary)
+                .symairaText(.secondary)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -184,10 +178,9 @@ struct ToolDetailView: View {
         HStack(alignment: .firstTextBaseline) {
             Text(label)
                 .frame(width: 80, alignment: .leading)
-                .foregroundStyle(SymairaTheme.textMuted)
+                .symairaText(.caption)
             Text(value)
-                .font(.callout.monospaced())
-                .foregroundStyle(SymairaTheme.textSecondary)
+                .symairaText(.monoSmall)
                 .textSelection(.enabled)
         }
     }
