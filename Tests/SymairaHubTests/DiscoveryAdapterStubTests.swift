@@ -191,4 +191,40 @@ final class DiscoveryAdapterStubTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+
+    func testSymskillsNonZeroExitThrowsInvalidResponse() async throws {
+        let stub = try makeStub("symskills-broken", script: """
+        echo 'boom' >&2
+        exit 3
+        """)
+        let adapter = SymskillsDiscoveryAdapter(binaryPath: stub)
+
+        do {
+            _ = try await adapter.discover()
+            XCTFail("expected invalidResponse")
+        } catch let error as DiscoveryError {
+            guard case .invalidResponse(let detail) = error else {
+                return XCTFail("unexpected error: \(error)")
+            }
+            XCTAssertTrue(detail.contains("boom"))
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    func testSymskillsMissingBinaryThrowsToolUnavailable() async {
+        let adapter = SymskillsDiscoveryAdapter(binaryPath: "/nonexistent/symskills")
+
+        do {
+            _ = try await adapter.discover()
+            XCTFail("expected toolUnavailable")
+        } catch let error as DiscoveryError {
+            guard case .toolUnavailable(let tool) = error else {
+                return XCTFail("unexpected error: \(error)")
+            }
+            XCTAssertEqual(tool, "symskills")
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
 }

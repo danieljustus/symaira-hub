@@ -166,11 +166,12 @@ final class HubState {
     /// Derive the visible candidates from the raw scan result and the
     /// persisted decisions.
     private func applyDecisions() {
-        let ignoredIDs = decisionStore.ignoredSourceIDs
-        let snoozedIDs = decisionStore.snoozedSourceIDs
         sourceCandidates = rawSources
-            .map { SourceCandidate(source: $0, decision: decisionStore.decision(for: $0.sourceID)) }
-            .filter { !ignoredIDs.contains($0.source.id) && !snoozedIDs.contains($0.source.id) }
+            .compactMap { source in
+                let decision = decisionStore.decision(for: source.sourceID)
+                guard decision != .ignored, decision != .snoozed else { return nil }
+                return SourceCandidate(source: source, decision: decision)
+            }
     }
 }
 

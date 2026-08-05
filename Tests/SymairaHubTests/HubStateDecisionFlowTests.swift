@@ -73,6 +73,7 @@ final class HubStateDecisionFlowTests: XCTestCase {
     func testInitialCandidatesAreAllPending() async {
         let state = await makeState(adapter: FixedDiscoveryAdapter(sources: sampleSources))
         XCTAssertEqual(state.sourceCandidates.count, 2)
+        XCTAssertEqual(state.sourceCandidates.first?.id, "t:one")
         XCTAssertEqual(state.pendingSourceCount, 2)
         XCTAssertEqual(state.sourceScanError, nil)
     }
