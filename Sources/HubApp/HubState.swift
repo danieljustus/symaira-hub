@@ -29,21 +29,31 @@ final class HubState {
 
     var selectedToolID: String?
 
-    private let detector = ToolDetector()
+    private let detector: ToolDetector
 
     // Source inspector state
     private(set) var sourceCandidates: [SourceCandidate] = []
     private(set) var sourceScanError: String?
-    let decisionStore = SourceDecisionStore()
+    let decisionStore: SourceDecisionStore
 
     /// Real CLI adapters. Missing tools are handled as empty discovery results
     /// by the composite, so installation remains optional.
-    private let discoveryAdapter: SourceDiscoveryAdapter = CompositeDiscoveryAdapter(
-        adapters: [
-            SymmemoryDiscoveryAdapter(),
-            SymskillsDiscoveryAdapter()
-        ]
-    )
+    private let discoveryAdapter: SourceDiscoveryAdapter
+
+    init(
+        decisionStore: SourceDecisionStore = SourceDecisionStore(),
+        discoveryAdapter: SourceDiscoveryAdapter = CompositeDiscoveryAdapter(
+            adapters: [
+                SymmemoryDiscoveryAdapter(),
+                SymskillsDiscoveryAdapter()
+            ]
+        ),
+        detector: ToolDetector = ToolDetector()
+    ) {
+        self.decisionStore = decisionStore
+        self.discoveryAdapter = discoveryAdapter
+        self.detector = detector
+    }
 
     var selectedRow: ToolRow? {
         rows.first { $0.id == selectedToolID }

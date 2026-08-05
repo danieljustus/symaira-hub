@@ -5,12 +5,13 @@ import Foundation
 @Observable
 @MainActor
 final class SourceDecisionStore {
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private let key = "symaira.hub.sourceDecisions"
 
     private var storage: [String: SourceDecision] = [:]
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         load()
     }
 

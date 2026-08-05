@@ -61,3 +61,30 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Symaira Hub
         INFOPLIST_KEY_CFBundleName: Symaira Hub
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  SymairaHubTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget:
+      macOS: "14.0"
+    sources:
+      - path: Tests/SymairaHubTests
+    dependencies:
+      - target: SymairaHub
+      - package: SymairaAppKit
+        product: SymairaCLIRunner
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: dev.symaira.SymairaHubTests
+
+schemes:
+  SymairaHub:
+    build:
+      targets:
+        SymairaHub: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - SymairaHubTests
