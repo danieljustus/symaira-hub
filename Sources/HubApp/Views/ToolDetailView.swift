@@ -58,12 +58,12 @@ struct ToolDetailView: View {
 
     private func upgradeWarningView(expected: Int, actual: Int) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Inkompatible CLI-Version")
+            Text("Incompatible CLI version")
                 .symairaText(.subheading)
-            Text("Das installierte CLI-Tool verwendet Schema-Version "
-                 + "\\(actual), aber dieses Hub-Modul erwartet Version \\(expected).")
+            Text("The installed CLI tool uses schema version "
+                 + "\(actual), but this hub module expects version \(expected).")
                 .symairaText(.secondary)
-            Text("Bitte aktualisiere das CLI-Tool:")
+            Text("Please update the CLI tool:")
                 .symairaText(.subheading)
             HStack {
                 Text("brew upgrade \(row.tool.homebrewFormula)")
@@ -77,7 +77,7 @@ struct ToolDetailView: View {
                     Image(systemName: "doc.on.doc")
                 }
                 .buttonStyle(.plain)
-                .help("Befehl kopieren")
+                .help("Copy command")
             }
         }
         .padding(18)
@@ -113,10 +113,10 @@ struct ToolDetailView: View {
 
     private func installedCard(_ detected: DetectedTool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            row1("Version", detected.versionInfo?.version ?? "unbekannt")
+            row1("Version", detected.versionInfo?.version ?? "unknown")
             row1("Schema", schemaLabel(detected.versionInfo?.schemaVersion))
-            row1("Pfad", detected.location.url.path)
-            row1("Quelle", detected.location.source.rawValue)
+            row1("Path", detected.location.url.path)
+            row1("Source", detected.location.source.rawValue)
             if row.tool.supportsMCP {
                 row1("MCP", ([row.tool.binaryName] + row.tool.mcpArgs).joined(separator: " "))
             }
@@ -128,9 +128,9 @@ struct ToolDetailView: View {
 
     private var installCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Nicht installiert")
+            Text("Not installed")
                 .symairaText(.subheading)
-            Text("Dieses Modul erscheint automatisch, sobald das CLI installiert ist.")
+            Text("This module appears automatically once the CLI is installed.")
                 .symairaText(.secondary)
             HStack {
                 Text("brew install \(row.tool.homebrewFormula)")
@@ -144,7 +144,7 @@ struct ToolDetailView: View {
                     Image(systemName: "doc.on.doc")
                 }
                 .buttonStyle(.plain)
-                .help("Befehl kopieren")
+                .help("Copy command")
             }
         }
         .padding(18)
@@ -154,11 +154,11 @@ struct ToolDetailView: View {
 
     private var modulePlaceholder: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Modul")
+            Text("Module")
                 .symairaText(.subheading)
-            Text("Das Feature-Modul für \(row.tool.displayName) ist noch nicht "
-                 + "in den Hub eingebettet. Integrationsvertrag: "
-                 + "siehe AGENTS.md (\"Module Integration Contract\").")
+            Text("The feature module for \(row.tool.displayName) is not yet "
+                 + "embedded in the hub. Integration contract: "
+                 + "see AGENTS.md (\"Module Integration Contract\").")
                 .symairaText(.secondary)
         }
         .padding(18)
@@ -168,8 +168,8 @@ struct ToolDetailView: View {
 
     private func schemaLabel(_ schema: Int?) -> String {
         switch schema {
-        case nil: return "unbekannt"
-        case 0: return "0 (kein version --json — best effort)"
+        case nil: return "unknown"
+        case 0: return "0 (no version --json — best effort)"
         case let ver?: return "\(ver)"
         }
     }
