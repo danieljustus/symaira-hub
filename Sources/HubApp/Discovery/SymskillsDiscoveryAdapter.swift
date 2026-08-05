@@ -1,5 +1,6 @@
 import Foundation
 import SymairaCLIRunner
+import SymairaToolKit
 
 /// Adapter that calls `symskills discover --json` and maps the output
 /// to the Source Discovery Contract v1 format.
@@ -7,14 +8,31 @@ actor SymskillsDiscoveryAdapter: SourceDiscoveryAdapter {
     private let binaryPath: String
     private let runner: CLIRunner
 
-    init(binaryPath: String = "/opt/homebrew/bin/symskills", runner: CLIRunner = CLIRunner()) {
-        self.binaryPath = binaryPath
+    /// Resolve the binary through appkit's `BinaryLocator` (bundle → PATH →
+    /// Homebrew), keeping the legacy Homebrew path as a last-resort fallback.
+    /// `binaryPath` stays injectable for stub-binary tests.
+    init(binaryPath: String? = nil, runner: CLIRunner = CLIRunner()) {
+        self.binaryPath = binaryPath ?? Self.locateBinary("symskills")
         self.runner = runner
     }
 
     func discover() async throws -> [DiscoveredSource] {
         let data = try await runSymskillsDiscover()
         let response = try JSONDecoder().decode(SymskillsDiscoverResponse.self, from: data)
+
+        // Schema handshake: validate when the CLI reports a version
+        // (symskills ≥ the schema_version envelope change). Older installs
+        // without the field are treated as v1 best-effort, mirroring the
+        // version --json convention, so nothing breaks mid-migration.
+        if let actual = response.schemaVersion,
+           actual != DiscoveryContract.expectedSchemaVersion {
+            throw DiscoveryError.schemaMismatch(
+                tool: "symskills",
+                expected: DiscoveryContract.expectedSchemaVersion,
+                actual: actual
+            )
+        }
+
         return response.candidates.map { $0.toDiscoveredSource() }
     }
 
@@ -41,12 +59,22 @@ actor SymskillsDiscoveryAdapter: SourceDiscoveryAdapter {
             throw DiscoveryError.toolUnavailable("symskills")
         }
     }
+
+    private static func locateBinary(_ name: String) -> String {
+        BinaryLocator().locate(name)?.url.path ?? "/opt/homebrew/bin/\(name)"
+    }
 }
 
 // MARK: - symskills JSON types
 
 private struct SymskillsDiscoverResponse: Codable {
+    let schemaVersion: Int?
     let candidates: [SymskillsCandidate]
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion = "schema_version"
+        case candidates
+    }
 }
 
 private struct SymskillsCandidate: Codable {
@@ -57,27 +85,38 @@ private struct SymskillsCandidate: Codable {
     let location: String
     let managed: Bool
     let valid: Bool
-    let source: String
     let status: String
 
     enum CodingKeys: String, CodingKey {
         case sourceID = "source_id"
         case target, kind
         case displayName = "display_name"
-        case location, managed, valid, source, status
+        case location, managed, valid, status
     }
 
     func toDiscoveredSource() -> DiscoveredSource {
-        DiscoveredSource(
+        // Surface the real managed/valid/status fields instead of the
+        // fabricated capability list; `source` is dropped as dead.
+        var capabilities = ["import"]
+        capabilities.append(managed ? "managed" : "unmanaged")
+        if !valid {
+            capabilities.append("needs-review")
+        }
+
+        return DiscoveredSource(
             sourceID: "symskills:\(sourceID)",
             tool: "symskills",
             kind: kind.replacingOccurrences(of: "_", with: "-"),
             displayName: displayName,
             location: location,
-            capabilities: ["import"],
+            capabilities: capabilities,
             itemCount: nil,
-            lastSeen: ISO8601DateFormatter().string(from: Date()),
-            privacyHint: "none"
+            // No fabricated "last seen now": the discovery output does not
+            // report when a source was last seen.
+            lastSeen: nil,
+            // No fabricated "none": the discovery output does not report a
+            // privacy hint, so "unknown" is the honest label.
+            privacyHint: "unknown"
         )
     }
 }
