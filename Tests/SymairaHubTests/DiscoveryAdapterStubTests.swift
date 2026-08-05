@@ -12,7 +12,7 @@ final class DiscoveryAdapterStubTests: XCTestCase {
         super.setUp()
         stubDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("hub-stubs-\(UUID().uuidString)")
-        try! FileManager.default.createDirectory(at: stubDir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: stubDir, withIntermediateDirectories: true)
     }
 
     override func tearDown() {
