@@ -1,12 +1,15 @@
 import Foundation
+import SymairaCLIRunner
 
 /// Adapter that calls `symmemory discover sources` and maps the output
 /// to the Source Discovery Contract v1 format.
 actor SymmemoryDiscoveryAdapter: SourceDiscoveryAdapter {
     private let binaryPath: String
+    private let runner: CLIRunner
 
-    init(binaryPath: String = "/opt/homebrew/bin/symmemory") {
+    init(binaryPath: String = "/opt/homebrew/bin/symmemory", runner: CLIRunner = CLIRunner()) {
         self.binaryPath = binaryPath
+        self.runner = runner
     }
 
     func discover() async throws -> [DiscoveredSource] {
@@ -23,34 +26,26 @@ actor SymmemoryDiscoveryAdapter: SourceDiscoveryAdapter {
     }
 
     /// Run `symmemory discover sources` and return stdout data.
+    /// Uses the shared `CLIRunner`, which terminates the subprocess on task
+    /// cancellation, so a hung binary cannot leak across refreshes.
     private func runSymmemoryDiscover() async throws -> Data {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: binaryPath)
-        process.arguments = ["discover", "sources"]
-        process.qualityOfService = .userInitiated
-
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        return try await withCheckedThrowingContinuation { continuation in
-            process.terminationHandler = { proc in
-                guard proc.terminationStatus == 0 else {
-                    let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                    let message = String(data: errData, encoding: .utf8) ?? "unknown error"
-                    continuation.resume(throwing: DiscoveryError.invalidResponse(message))
-                    return
-                }
-                let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                continuation.resume(returning: data)
+        do {
+            return try await runner.runChecked(
+                URL(fileURLWithPath: binaryPath),
+                arguments: ["discover", "sources"]
+            )
+        } catch let error as CLIRunnerError {
+            switch error {
+            case .executionFailed(_, let stderr):
+                throw DiscoveryError.invalidResponse(stderr)
+            case .timeout(let seconds):
+                throw DiscoveryError.timeout("symmemory (\(Int(seconds))s)")
+            default:
+                throw DiscoveryError.toolUnavailable("symmemory")
             }
-
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(throwing: DiscoveryError.toolUnavailable("symmemory"))
-            }
+        } catch {
+            // Binary missing or not executable.
+            throw DiscoveryError.toolUnavailable("symmemory")
         }
     }
 }
