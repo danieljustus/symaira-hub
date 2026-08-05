@@ -1,5 +1,6 @@
 import Foundation
 import SymairaCLIRunner
+import SymairaToolKit
 
 /// Adapter that calls `symmemory discover sources` and maps the output
 /// to the Source Discovery Contract v1 format.
@@ -7,8 +8,12 @@ actor SymmemoryDiscoveryAdapter: SourceDiscoveryAdapter {
     private let binaryPath: String
     private let runner: CLIRunner
 
-    init(binaryPath: String = "/opt/homebrew/bin/symmemory", runner: CLIRunner = CLIRunner()) {
-        self.binaryPath = binaryPath
+    /// Resolve the binary through appkit's `BinaryLocator` (bundle → PATH →
+    /// Homebrew), keeping the legacy Homebrew path as a last-resort fallback
+    /// so Intel/arm machines and non-Homebrew installs are not misreported
+    /// as unavailable. `binaryPath` stays injectable for stub-binary tests.
+    init(binaryPath: String? = nil, runner: CLIRunner = CLIRunner()) {
+        self.binaryPath = binaryPath ?? Self.locateBinary("symmemory")
         self.runner = runner
     }
 
@@ -47,5 +52,9 @@ actor SymmemoryDiscoveryAdapter: SourceDiscoveryAdapter {
             // Binary missing or not executable.
             throw DiscoveryError.toolUnavailable("symmemory")
         }
+    }
+
+    private static func locateBinary(_ name: String) -> String {
+        BinaryLocator().locate(name)?.url.path ?? "/opt/homebrew/bin/\(name)"
     }
 }
