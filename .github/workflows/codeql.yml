@@ -52,7 +52,11 @@ jobs:
       - name: Generate Xcode project
         if: matrix.language == 'swift'
         run: |
-          brew install xcodegen 2>/dev/null || brew upgrade xcodegen 2>/dev/null || true
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            curl -sL https://github.com/yonaskolb/XcodeGen/releases/download/2.45.4/xcodegen.zip -o /tmp/xcodegen.zip
+            unzip -q /tmp/xcodegen.zip -d /tmp/xcodegen
+            export PATH="/tmp/xcodegen/xcodegen/bin:$PATH"
+          fi
           xcodegen generate
 
       - name: Build
