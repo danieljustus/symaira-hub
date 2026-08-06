@@ -3,23 +3,30 @@ import SymairaTheme
 
 /// Pending-source inspector: list/detail view with Add, Ignore, Review-later decisions.
 struct SourceInspectorView: View {
+    /// All rendering decisions come from the model (#64); the environment
+    /// is only needed for direct HubState mutations from cards/buttons.
+    let model: SourceInspectorModel
     @Environment(HubState.self) private var state
 
     var body: some View {
-        let pending = state.sourceCandidates.filter(\.isPending)
-
-        if pending.isEmpty, state.sourceScanError == nil {
+        // A failed provider is still worth showing: the hint stays visible
+        // even when nothing is pending and no banner is set.
+        if model.isEmpty, model.unavailableProviders.isEmpty {
             emptyState
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     header
 
-                    if let error = state.sourceScanError {
+                    if let error = model.errorBannerMessage {
                         errorBanner(error)
                     }
 
-                    ForEach(state.sourceCandidates) { candidate in
+                    if !model.unavailableProviders.isEmpty {
+                        unavailableHint
+                    }
+
+                    ForEach(model.candidates) { candidate in
                         SourceCandidateCard(candidate: candidate)
                     }
 
@@ -44,7 +51,7 @@ struct SourceInspectorView: View {
                     .symairaText(.display)
                 Spacer()
                 Button {
-                    Task { await state.refreshSources() }
+                    Task { await model.refresh() }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
@@ -69,7 +76,7 @@ struct SourceInspectorView: View {
                 .symairaText(.secondary)
                 .multilineTextAlignment(.center)
             Button("Scan Now") {
-                Task { await state.refreshSources() }
+                Task { await model.refresh() }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -82,6 +89,32 @@ struct SourceInspectorView: View {
                 .foregroundStyle(SymairaTheme.goldPrimary)
             Text(message)
                 .symairaText(.secondary)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(SymairaTheme.goldPrimary.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    /// Compact warning row for providers that failed the last scan, with
+    /// an expandable per-tool detail list.
+    private var unavailableHint: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(model.unavailableProviders, id: \.self) { failure in
+                    Text(failure.localizedDescription)
+                        .symairaText(.caption)
+                        .textSelection(.enabled)
+                }
+            }
+            .padding(.top, 6)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(SymairaTheme.goldPrimary)
+                Text(model.unavailableProviderSummary)
+                    .symairaText(.secondary)
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)

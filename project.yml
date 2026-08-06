@@ -71,6 +71,10 @@ targets:
       - target: SymairaHub
       - package: SymairaAppKit
         product: SymairaCLIRunner
+      - package: SymscopeClient
+        product: SymscopeFeature
+      - package: SymseekClient
+        product: SymseekFeature
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
