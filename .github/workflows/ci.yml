@@ -17,7 +17,7 @@ jobs:
   lint:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install SwiftLint
         run: brew install swiftlint
@@ -31,15 +31,15 @@ jobs:
   build:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up module repositories
         run: |
           mkdir -p Modules
-          git clone --depth 1 https://github.com/danieljustus/symaira-scope.git /tmp/symscope
+          git clone --depth 1 --branch v0.4.0 https://github.com/danieljustus/symaira-scope.git /tmp/symscope
           rm -f Modules/symscope-client
           ln -sf /tmp/symscope/client Modules/symscope-client
-          git clone --depth 1 https://github.com/danieljustus/symaira-seek.git /tmp/symseek
+          git clone --depth 1 --branch v2.5.0 https://github.com/danieljustus/symaira-seek.git /tmp/symseek
           rm -f Modules/symseek-client
           ln -sf /tmp/symseek/client Modules/symseek-client
 
@@ -58,15 +58,15 @@ jobs:
   test:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up module repositories
         run: |
           mkdir -p Modules
-          git clone --depth 1 https://github.com/danieljustus/symaira-scope.git /tmp/symscope
+          git clone --depth 1 --branch v0.4.0 https://github.com/danieljustus/symaira-scope.git /tmp/symscope
           rm -f Modules/symscope-client
           ln -sf /tmp/symscope/client Modules/symscope-client
-          git clone --depth 1 https://github.com/danieljustus/symaira-seek.git /tmp/symseek
+          git clone --depth 1 --branch v2.5.0 https://github.com/danieljustus/symaira-seek.git /tmp/symseek
           rm -f Modules/symseek-client
           ln -sf /tmp/symseek/client Modules/symseek-client
 
