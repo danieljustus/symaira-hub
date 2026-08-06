@@ -24,12 +24,24 @@ struct SourceCandidate: Identifiable {
 @MainActor
 final class HubState {
     private(set) var rows: [ToolRow] = []
+    /// Cached partitions of `rows` so the sidebar renders without
+    /// re-filtering on every body evaluation.
+    private(set) var installedRows: [ToolRow] = []
+    private(set) var availableRows: [ToolRow] = []
     private(set) var isRefreshing = false
     private(set) var lastRefresh: Date?
 
     var selectedToolID: String?
 
     private let detector: ToolDetector
+
+    /// Optional injected detection seam (tests). When nil, the real
+    /// `detector` runs — which spawns a subprocess per tool.
+    private let detectOverride: (@Sendable (SymairaTool) async -> DetectedTool?)?
+
+    /// Minimum interval between automatic rescans. A forced refresh always
+    /// bypasses this.
+    private let refreshTTL: TimeInterval
 
     // Source inspector state
     private(set) var sourceCandidates: [SourceCandidate] = []
@@ -48,11 +60,15 @@ final class HubState {
                 SymskillsDiscoveryAdapter()
             ]
         ),
-        detector: ToolDetector = ToolDetector()
+        detector: ToolDetector = ToolDetector(),
+        refreshTTL: TimeInterval = 5,
+        detect: (@Sendable (SymairaTool) async -> DetectedTool?)? = nil
     ) {
         self.decisionStore = decisionStore
         self.discoveryAdapter = discoveryAdapter
         self.detector = detector
+        self.refreshTTL = refreshTTL
+        self.detectOverride = detect
     }
 
     var selectedRow: ToolRow? {
@@ -68,9 +84,28 @@ final class HubState {
         sourceCandidates.filter(\.isPending).count
     }
 
+    /// Whether a fresh scan should run given the last scan time and the
+    /// refresh TTL. A nil `lastRefresh` (first launch) always refreshes;
+    /// `force` always refreshes, even when the last scan is fresh.
+    nonisolated static func shouldRefresh(
+        lastRefresh: Date?,
+        now: Date = Date(),
+        ttl: TimeInterval,
+        force: Bool
+    ) -> Bool {
+        if force { return true }
+        guard let lastRefresh else { return true }
+        return now.timeIntervalSince(lastRefresh) >= ttl
+    }
+
     /// Re-run runtime detection over the whole registry. Modules only
     /// "light up" for installed CLIs — the hub never requires them.
-    func refresh() async {
+    ///
+    /// Automatic refreshes within `refreshTTL` of the last scan are
+    /// skipped (detection spawns a subprocess per tool); pass
+    /// `force: true` (e.g. the toolbar button) to always rescan.
+    func refresh(force: Bool = false) async {
+        guard Self.shouldRefresh(lastRefresh: lastRefresh, ttl: refreshTTL, force: force) else { return }
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
@@ -79,11 +114,15 @@ final class HubState {
         // so refresh stalls for the slowest spawn instead of the sum of
         // all spawns. The sort afterwards keeps the order deterministic.
         let detector = self.detector
+        let detectOverride = self.detectOverride
         var newRows: [ToolRow] = []
         await withTaskGroup(of: (tool: SymairaTool, detected: DetectedTool?).self) { group in
             for tool in SymairaToolRegistry.all {
                 group.addTask {
-                    (tool, await detector.detect(tool))
+                    if let detectOverride {
+                        return (tool, await detectOverride(tool))
+                    }
+                    return (tool, await detector.detect(tool))
                 }
             }
             for await (tool, detected) in group {
@@ -94,6 +133,8 @@ final class HubState {
             if $0.isInstalled != $1.isInstalled { return $0.isInstalled }
             return $0.tool.displayName < $1.tool.displayName
         }
+        installedRows = rows.filter(\.isInstalled)
+        availableRows = rows.filter { !$0.isInstalled }
         lastRefresh = Date()
 
         if selectedToolID == nil {
