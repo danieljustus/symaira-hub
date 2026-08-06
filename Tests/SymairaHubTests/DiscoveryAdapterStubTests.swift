@@ -63,12 +63,13 @@ final class DiscoveryAdapterStubTests: XCTestCase {
         let stub = try makeStub("symmemory", script: jsonScript(symmemoryOK))
         let adapter = SymmemoryDiscoveryAdapter(binaryPath: stub)
 
-        let sources = try await adapter.discover()
+        let result = try await adapter.discover()
 
-        XCTAssertEqual(sources.count, 1)
-        XCTAssertEqual(sources.first?.sourceID, "m:1")
-        XCTAssertEqual(sources.first?.displayName, "Memo One")
-        XCTAssertEqual(sources.first?.itemCount, 42)
+        XCTAssertEqual(result.sources.count, 1)
+        XCTAssertEqual(result.sources.first?.sourceID, "m:1")
+        XCTAssertEqual(result.sources.first?.displayName, "Memo One")
+        XCTAssertEqual(result.sources.first?.itemCount, 42)
+        XCTAssertTrue(result.failures.isEmpty)
     }
 
     func testSymmemorySchemaMismatchThrows() async throws {
@@ -94,25 +95,26 @@ final class DiscoveryAdapterStubTests: XCTestCase {
         let stub = try makeStub("symskills", script: jsonScript(symskillsOK))
         let adapter = SymskillsDiscoveryAdapter(binaryPath: stub)
 
-        let sources = try await adapter.discover()
+        let result = try await adapter.discover()
 
-        XCTAssertEqual(sources.count, 1)
-        let candidate = try XCTUnwrap(sources.first)
+        XCTAssertEqual(result.sources.count, 1)
+        let candidate = try XCTUnwrap(result.sources.first)
         XCTAssertEqual(candidate.sourceID, "symskills:s:1")
         XCTAssertEqual(candidate.kind, "skill-bundle")
         XCTAssertEqual(candidate.capabilities, ["import", "managed"])
         XCTAssertNil(candidate.lastSeen)
         XCTAssertEqual(candidate.privacyHint, "unknown")
+        XCTAssertTrue(result.failures.isEmpty)
     }
 
     func testSymskillsAcceptsMissingSchemaVersionAsBestEffort() async throws {
         let stub = try makeStub("symskills-legacy", script: jsonScript(symskillsLegacy))
         let adapter = SymskillsDiscoveryAdapter(binaryPath: stub)
 
-        let sources = try await adapter.discover()
+        let result = try await adapter.discover()
 
-        XCTAssertEqual(sources.count, 1)
-        XCTAssertEqual(sources.first?.capabilities, ["import", "unmanaged"])
+        XCTAssertEqual(result.sources.count, 1)
+        XCTAssertEqual(result.sources.first?.capabilities, ["import", "unmanaged"])
     }
 
     func testSymskillsSchemaMismatchThrows() async throws {

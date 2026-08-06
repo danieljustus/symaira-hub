@@ -2,13 +2,15 @@ import XCTest
 @testable import SymairaHub
 
 /// Deterministic discovery adapter for HubState flow tests: returns a fixed
-/// set of sources instantly, or throws when asked.
+/// set of sources (plus optional failures) instantly, or throws when asked.
 actor FixedDiscoveryAdapter: SourceDiscoveryAdapter {
     let sources: [DiscoveredSource]
+    private var failures: [DiscoveryError]
     private var shouldThrow = false
 
-    init(sources: [DiscoveredSource]) {
+    init(sources: [DiscoveredSource], failures: [DiscoveryError] = []) {
         self.sources = sources
+        self.failures = failures
     }
 
     /// Make the next discover() call throw.
@@ -16,11 +18,11 @@ actor FixedDiscoveryAdapter: SourceDiscoveryAdapter {
         shouldThrow = true
     }
 
-    func discover() async throws -> [DiscoveredSource] {
+    func discover() async throws -> DiscoveryResult {
         if shouldThrow {
             throw DiscoveryError.toolUnavailable("test")
         }
-        return sources
+        return DiscoveryResult(sources: sources, failures: failures)
     }
 }
 
@@ -170,5 +172,36 @@ final class HubStateDecisionFlowTests: XCTestCase {
         XCTAssertNotNil(state.sourceScanError)
         XCTAssertTrue(state.sourceCandidates.isEmpty)
         XCTAssertEqual(state.pendingSourceCount, 0)
+        XCTAssertEqual(state.discoveryFailures, [.toolUnavailable("test")])
+        XCTAssertEqual(state.unavailableProviderCount, 1)
+    }
+
+    @MainActor
+    func testPartialFailureKeepsCandidatesWithoutBanner() async {
+        let state = await makeState(adapter: FixedDiscoveryAdapter(
+            sources: sampleSources,
+            failures: [.toolUnavailable("symskills")]
+        ))
+
+        XCTAssertEqual(state.sourceCandidates.count, 2)
+        XCTAssertNil(state.sourceScanError)
+        XCTAssertEqual(state.discoveryFailures, [.toolUnavailable("symskills")])
+        XCTAssertEqual(state.unavailableProviderCount, 1)
+    }
+
+    @MainActor
+    func testAllProvidersDownSetsCombinedScanError() async {
+        let state = await makeState(adapter: FixedDiscoveryAdapter(
+            sources: [],
+            failures: [.toolUnavailable("symmemory"), .toolUnavailable("symskills")]
+        ))
+
+        XCTAssertTrue(state.sourceCandidates.isEmpty)
+        XCTAssertEqual(
+            state.sourceScanError,
+            "symmemory is not available (2 providers unavailable)"
+        )
+        XCTAssertEqual(state.discoveryFailures.count, 2)
+        XCTAssertEqual(state.unavailableProviderCount, 2)
     }
 }

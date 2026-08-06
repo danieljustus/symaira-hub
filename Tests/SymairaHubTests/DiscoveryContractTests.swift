@@ -45,7 +45,8 @@ final class DiscoveryContractTests: XCTestCase {
     func testMockDiscoveryReturnsStableSampleMetadata() async throws {
         let adapter = MockDiscoveryAdapter(minDelay: 0, maxDelay: 0)
 
-        let sources = try await adapter.discover()
+        let result = try await adapter.discover()
+        let sources = result.sources
 
         XCTAssertEqual(sources.count, 4)
         XCTAssertEqual(
@@ -59,6 +60,46 @@ final class DiscoveryContractTests: XCTestCase {
         )
         XCTAssertEqual(sources.map(\.tool), ["symmemory", "symmemory", "symskills", "symskills"])
         XCTAssertTrue(sources.allSatisfy { $0.capabilities == ["import"] })
+        XCTAssertTrue(result.failures.isEmpty)
     }
 
+    func testMockThrowsToolUnavailableWhenSimulatingError() async {
+        let adapter = MockDiscoveryAdapter(minDelay: 0, maxDelay: 0)
+        await adapter.setSimulateError(true)
+
+        do {
+            _ = try await adapter.discover()
+            XCTFail("expected toolUnavailable")
+        } catch let error as DiscoveryError {
+            guard case .toolUnavailable(let tool) = error else {
+                return XCTFail("unexpected error: \(error)")
+            }
+            XCTAssertEqual(tool, "symmemory")
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    func testDiscoveryResultAggregatesSourcesAndFailures() {
+        let result = DiscoveryResult(
+            sources: [source()],
+            failures: [.toolUnavailable("symskills"), .timeout("symmemory")]
+        )
+
+        XCTAssertEqual(result.sources.count, 1)
+        XCTAssertEqual(result.failures.count, 2)
+        XCTAssertEqual(
+            result,
+            DiscoveryResult(
+                sources: [source()],
+                failures: [.toolUnavailable("symskills"), .timeout("symmemory")]
+            )
+        )
+    }
+
+    func testDiscoveryResultDefaultsToNoFailures() {
+        let result = DiscoveryResult(sources: [source()])
+
+        XCTAssertTrue(result.failures.isEmpty)
+    }
 }

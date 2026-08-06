@@ -16,7 +16,7 @@ actor SymskillsDiscoveryAdapter: SourceDiscoveryAdapter {
         self.runner = runner
     }
 
-    func discover() async throws -> [DiscoveredSource] {
+    func discover() async throws -> DiscoveryResult {
         let data = try await runSymskillsDiscover()
         let response = try JSONDecoder().decode(SymskillsDiscoverResponse.self, from: data)
 
@@ -33,7 +33,7 @@ actor SymskillsDiscoveryAdapter: SourceDiscoveryAdapter {
             )
         }
 
-        return response.candidates.map { $0.toDiscoveredSource() }
+        return DiscoveryResult(sources: response.candidates.map { $0.toDiscoveredSource() })
     }
 
     /// Run `symskills discover --json` and return stdout data.

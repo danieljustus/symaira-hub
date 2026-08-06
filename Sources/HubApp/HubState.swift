@@ -34,6 +34,10 @@ final class HubState {
     // Source inspector state
     private(set) var sourceCandidates: [SourceCandidate] = []
     private(set) var sourceScanError: String?
+    /// Per-provider failures from the last scan. Populated on partial
+    /// failures (some providers down, some sources found) and total
+    /// failures alike, so the UI can hint at which tools are unavailable.
+    private(set) var discoveryFailures: [DiscoveryError] = []
     let decisionStore: SourceDecisionStore
 
     /// Real CLI adapters. Missing tools are handled as empty discovery results
@@ -67,6 +71,9 @@ final class HubState {
     var pendingSourceCount: Int {
         sourceCandidates.filter(\.isPending).count
     }
+
+    /// Number of source providers that failed the last scan.
+    var unavailableProviderCount: Int { discoveryFailures.count }
 
     /// Re-run runtime detection over the whole registry. Modules only
     /// "light up" for installed CLIs — the hub never requires them.
@@ -114,11 +121,25 @@ final class HubState {
         decisionStore.expireSnoozed()
 
         do {
-            rawSources = try await withTimeout(seconds: 10) {
+            let result = try await withTimeout(seconds: 10) {
                 try await self.discoveryAdapter.discover()
+            }
+            rawSources = result.sources
+            discoveryFailures = result.failures
+
+            // Total failure: every provider is down. The banner doubles as
+            // the empty-state explanation. Partial failures (some sources
+            // found) stay non-fatal — the inspector's per-provider hint
+            // covers them, so no banner is needed.
+            if result.sources.isEmpty, !result.failures.isEmpty {
+                let first = result.failures.first?.localizedDescription ?? "Discovery failed"
+                sourceScanError = "\(first) (\(result.failures.count) providers unavailable)"
             }
         } catch {
             sourceScanError = error.localizedDescription
+            discoveryFailures = [
+                error as? DiscoveryError ?? .invalidResponse(error.localizedDescription)
+            ]
             rawSources = []
         }
 

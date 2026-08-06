@@ -16,8 +16,16 @@ struct DiscoveryResponse: Codable, Sendable {
     }
 }
 
+/// Result of a discovery run: the sources found plus any per-adapter
+/// failures. Adapters keep working even when a sibling provider is down,
+/// so failures travel alongside the results instead of aborting the scan.
+struct DiscoveryResult: Sendable, Equatable {
+    var sources: [DiscoveredSource]
+    var failures: [DiscoveryError] = []
+}
+
 /// A single discovered source candidate.
-struct DiscoveredSource: Codable, Identifiable, Sendable {
+struct DiscoveredSource: Codable, Identifiable, Sendable, Equatable {
     let sourceID: String
     let tool: String
     let kind: String
