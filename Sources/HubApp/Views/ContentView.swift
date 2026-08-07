@@ -20,12 +20,12 @@ struct ContentView: View {
                 }
 
                 Section("Installed (\(state.installedCount))") {
-                    ForEach(state.rows.filter(\.isInstalled)) { row in
+                    ForEach(state.installedRows) { row in
                         ToolRowView(row: row).tag(row.id)
                     }
                 }
                 Section("Available") {
-                    ForEach(state.rows.filter { !$0.isInstalled }) { row in
+                    ForEach(state.availableRows) { row in
                         ToolRowView(row: row).tag(row.id)
                     }
                 }
@@ -35,7 +35,7 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem {
                     Button {
-                        Task { await state.refresh() }
+                        Task { await state.refresh(force: true) }
                     } label: {
                         if state.isRefreshing {
                             ProgressView().controlSize(.small)
