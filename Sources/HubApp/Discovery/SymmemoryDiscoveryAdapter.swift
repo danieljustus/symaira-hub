@@ -40,14 +40,7 @@ actor SymmemoryDiscoveryAdapter: SourceDiscoveryAdapter {
                 arguments: ["discover", "sources"]
             )
         } catch let error as CLIRunnerError {
-            switch error {
-            case .executionFailed(_, let stderr):
-                throw DiscoveryError.invalidResponse(stderr)
-            case .timeout(let seconds):
-                throw DiscoveryError.timeout("symmemory (\(Int(seconds))s)")
-            default:
-                throw DiscoveryError.toolUnavailable("symmemory")
-            }
+            throw DiscoveryAdapterSupport.mapRunnerError(error, tool: "symmemory")
         } catch {
             // Binary missing or not executable.
             throw DiscoveryError.toolUnavailable("symmemory")

@@ -46,14 +46,7 @@ actor SymskillsDiscoveryAdapter: SourceDiscoveryAdapter {
                 arguments: ["discover", "--json"]
             )
         } catch let error as CLIRunnerError {
-            switch error {
-            case .executionFailed(_, let stderr):
-                throw DiscoveryError.invalidResponse(stderr)
-            case .timeout(let seconds):
-                throw DiscoveryError.timeout("symskills (\(Int(seconds))s)")
-            default:
-                throw DiscoveryError.toolUnavailable("symskills")
-            }
+            throw DiscoveryAdapterSupport.mapRunnerError(error, tool: "symskills")
         } catch {
             // Binary missing or not executable.
             throw DiscoveryError.toolUnavailable("symskills")
