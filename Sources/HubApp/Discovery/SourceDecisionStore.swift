@@ -5,10 +5,19 @@ import Foundation
 @Observable
 @MainActor
 final class SourceDecisionStore {
+    /// How long to wait after the last mutation before persisting, so bursts
+    /// of approve/ignore click-throughs coalesce into a single write.
+    private static let saveDebounce: Duration = .milliseconds(300)
+
     private let defaults: UserDefaults
     private let key = "symaira.hub.sourceDecisions"
 
     private var storage: [String: SourceDecision] = [:]
+
+    /// The deferred save scheduled by the most recent mutation, if any.
+    private var saveTask: Task<Void, Never>?
+    /// Whether the in-memory state differs from what is currently persisted.
+    private var isDirty = false
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -27,7 +36,7 @@ final class SourceDecisionStore {
         } else {
             storage[sourceID] = decision
         }
-        save()
+        scheduleSave()
     }
 
     /// All source IDs currently marked as ignored.
@@ -47,14 +56,14 @@ final class SourceDecisionStore {
         let hadSnoozed = storage.values.contains(.snoozed)
         storage = storage.filter { $0.value != .snoozed }
         if hadSnoozed {
-            save()
+            scheduleSave()
         }
     }
 
     /// Reset all ignored sources back to pending.
     func resetIgnored() {
         storage = storage.filter { $0.value != .ignored }
-        save()
+        scheduleSave()
     }
 
     /// Reset a single source back to pending.
@@ -71,8 +80,31 @@ final class SourceDecisionStore {
         storage = decoded
     }
 
-    private func save() {
+    /// Persist any pending changes immediately, cancelling the deferred save.
+    func flush() {
+        saveTask?.cancel()
+        saveTask = nil
+        persistIfDirty()
+    }
+
+    /// Mark the store dirty and (re)schedule the deferred save. Cancelling
+    /// the previous task guarantees writes stay ordered: only the task
+    /// scheduled by the newest mutation may persist, and it always writes
+    /// the latest state, so a burst of mutations produces one trailing write.
+    private func scheduleSave() {
+        isDirty = true
+        saveTask?.cancel()
+        saveTask = Task {
+            try? await Task.sleep(for: Self.saveDebounce)
+            guard !Task.isCancelled else { return }
+            persistIfDirty()
+        }
+    }
+
+    private func persistIfDirty() {
+        guard isDirty else { return }
         guard let data = try? JSONEncoder().encode(storage) else { return }
         defaults.set(data, forKey: key)
+        isDirty = false
     }
 }

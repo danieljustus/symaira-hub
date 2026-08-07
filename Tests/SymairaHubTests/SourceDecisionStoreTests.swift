@@ -40,6 +40,7 @@ final class SourceDecisionStoreTests: XCTestCase {
     func testPersistenceAcrossInstances() {
         let (defaults, store) = freshStore()
         store.setDecision(.ignored, for: "persist:1")
+        store.flush()
 
         let reloaded = SourceDecisionStore(defaults: defaults)
         XCTAssertEqual(reloaded.decision(for: "persist:1"), .ignored)
@@ -86,5 +87,31 @@ final class SourceDecisionStoreTests: XCTestCase {
         store.setDecision(.approved, for: "a:1")
         store.expireSnoozed()
         XCTAssertEqual(store.decision(for: "a:1"), .approved)
+    }
+
+    @MainActor
+    func testMutationBurstCoalescesIntoOneDeferredSave() async throws {
+        let (defaults, store) = freshStore()
+
+        // A rapid click-through burst with no awaits between mutations, so
+        // the deferred save cannot fire mid-burst.
+        for index in 0..<20 {
+            store.setDecision(.approved, for: "burst:\(index)")
+        }
+        // The final decision for one source flips twice: the last wins.
+        store.setDecision(.ignored, for: "burst:19")
+        store.setDecision(.approved, for: "burst:19")
+
+        // While the deferred save is still pending, nothing has been written
+        // (the burst ran synchronously, so no intermediate save fired).
+        XCTAssertNil(defaults.data(forKey: "symaira.hub.sourceDecisions"))
+
+        // Let the trailing save fire, then prove the latest state persisted.
+        try await Task.sleep(for: .milliseconds(800))
+
+        let reloaded = SourceDecisionStore(defaults: defaults)
+        for index in 0..<20 {
+            XCTAssertEqual(reloaded.decision(for: "burst:\(index)"), .approved)
+        }
     }
 }
