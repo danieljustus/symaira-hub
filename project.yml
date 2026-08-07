@@ -71,6 +71,8 @@ targets:
       - target: SymairaHub
       - package: SymairaAppKit
         product: SymairaCLIRunner
+      - package: SymairaAppKit
+        product: SymairaToolKit
       - package: SymscopeClient
         product: SymscopeFeature
       - package: SymseekClient
