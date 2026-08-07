@@ -194,10 +194,10 @@ jobs:
             echo "::error::No .app found for DMG creation."
             exit 1
           fi
-          hdiutil create -volname "SymairaHub" \
-            -srcfolder "$APP_PATH" \
-            -ov -format UDZO \
-            "build/release/SymairaHub-${VERSION}.dmg"
+          ./scripts/create-symaira-dmg.sh \
+            "$APP_PATH" \
+            "build/release/SymairaHub-${VERSION}.dmg" \
+            "SymairaHub"
 
       - name: Create GitHub Release and upload DMG
         env:
