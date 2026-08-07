@@ -8,6 +8,7 @@ import SymseekFeature
 /// The view adapts the DetectedTool handshake to the primitive signature
 /// (toolID + schemaVersion) — DetectedTool itself is not constructible
 /// from tests (appkit's memberwise init is internal).
+@MainActor
 final class ToolDetailViewTests: XCTestCase {
     func testInstalledMismatchReturnsExpectedAndActual() {
         let mismatch = ToolDetailView.schemaMismatch(for: "symscope", schemaVersion: 2)
