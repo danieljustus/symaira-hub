@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-07
+
 ### Added
 - Per-adapter discovery failures surfaced; source inspector model extracted (#71)
 - Real symskills discovery adapter wired into the source inspector (#31)
