@@ -3,7 +3,8 @@ import Foundation
 /// Protocol for source discovery adapters — mock or real.
 protocol SourceDiscoveryAdapter: Sendable {
     /// Discover sources. Returns metadata only, never raw content or credentials.
-    func discover() async throws -> [DiscoveredSource]
+    /// Per-adapter failures are returned inside the result, not thrown.
+    func discover() async throws -> DiscoveryResult
 }
 
 /// Mock adapter returning sample data for development and testing.
@@ -15,6 +16,11 @@ actor MockDiscoveryAdapter: SourceDiscoveryAdapter {
 
     /// If true, the next call throws to simulate a tool error.
     var simulateError = false
+
+    /// Make the next discover() call throw to simulate a tool error.
+    func setSimulateError(_ value: Bool) {
+        simulateError = value
+    }
 
     /// Sample sources returned on success.
     private let sampleSources: [DiscoveredSource] = [
@@ -69,7 +75,7 @@ actor MockDiscoveryAdapter: SourceDiscoveryAdapter {
         self.maxDelay = maxDelay
     }
 
-    func discover() async throws -> [DiscoveredSource] {
+    func discover() async throws -> DiscoveryResult {
         // Simulate discovery latency
         let delay = Double.random(in: minDelay...maxDelay)
         try await Task.sleep(for: .seconds(delay))
@@ -78,16 +84,16 @@ actor MockDiscoveryAdapter: SourceDiscoveryAdapter {
             throw DiscoveryError.toolUnavailable("symmemory")
         }
 
-        return sampleSources
+        return DiscoveryResult(sources: sampleSources)
     }
 }
 
 /// A discovery adapter that always returns an empty list.
 actor EmptyDiscoveryAdapter: SourceDiscoveryAdapter {
-    func discover() async throws -> [DiscoveredSource] { [] }
+    func discover() async throws -> DiscoveryResult { DiscoveryResult(sources: []) }
 }
 
-enum DiscoveryError: Error, LocalizedError {
+enum DiscoveryError: Error, LocalizedError, Sendable, Equatable, Hashable {
     case toolUnavailable(String)
     case timeout(String)
     case invalidResponse(String)

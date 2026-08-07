@@ -9,7 +9,10 @@ struct ToolDetailView: View {
     let row: ToolRow
 
     var body: some View {
-        if row.isInstalled, let mismatch = schemaMismatch {
+        if let mismatch = Self.schemaMismatch(
+            for: row.tool.id,
+            schemaVersion: row.detected?.versionInfo?.schemaVersion
+        ) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     header
@@ -38,22 +41,28 @@ struct ToolDetailView: View {
         }
     }
 
-    private var schemaMismatch: (expected: Int, actual: Int)? {
-        guard let detected = row.detected else { return nil }
-        let actual = detected.versionInfo?.schemaVersion ?? 0
+    /// Schema-version mismatch between an installed tool and its embedded
+    /// feature module. Nil when the tool is not installed (no handshake
+    /// result), has no embedded module, or the versions are compatible — a
+    /// missing handshake (actual == 0) counts as best-effort compatibility,
+    /// mirroring ToolDetector.requireSchemaVersion.
+    static func schemaMismatch(
+        for toolID: String,
+        schemaVersion: Int?
+    ) -> (expected: Int, actual: Int)? {
+        let actual = schemaVersion ?? 0
+
         let expected: Int
-        if row.tool.id == "symscope" {
+        if toolID == "symscope" {
             expected = SymscopeModule.expectedSchemaVersion
-        } else if row.tool.id == "symseek" {
+        } else if toolID == "symseek" {
             expected = SymseekModule.expectedSchemaVersion
         } else {
             return nil
         }
 
-        if actual != 0 && actual != expected {
-            return (expected, actual)
-        }
-        return nil
+        guard actual != 0, actual != expected else { return nil }
+        return (expected, actual)
     }
 
     private func upgradeWarningView(expected: Int, actual: Int) -> some View {

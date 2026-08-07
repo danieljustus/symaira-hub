@@ -17,7 +17,7 @@ actor SymmemoryDiscoveryAdapter: SourceDiscoveryAdapter {
         self.runner = runner
     }
 
-    func discover() async throws -> [DiscoveredSource] {
+    func discover() async throws -> DiscoveryResult {
         let data = try await runSymmemoryDiscover()
         let response = try JSONDecoder().decode(DiscoveryResponse.self, from: data)
         guard response.schemaVersion == DiscoveryContract.expectedSchemaVersion else {
@@ -27,7 +27,7 @@ actor SymmemoryDiscoveryAdapter: SourceDiscoveryAdapter {
                 actual: response.schemaVersion
             )
         }
-        return response.sources
+        return DiscoveryResult(sources: response.sources)
     }
 
     /// Run `symmemory discover sources` and return stdout data.

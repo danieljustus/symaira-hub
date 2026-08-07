@@ -11,11 +11,11 @@ private actor StubAdapter: SourceDiscoveryAdapter {
         self.error = error
     }
 
-    func discover() async throws -> [DiscoveredSource] {
+    func discover() async throws -> DiscoveryResult {
         if let error {
             throw error
         }
-        return sources
+        return DiscoveryResult(sources: sources)
     }
 }
 
@@ -42,10 +42,11 @@ final class CompositeDiscoveryAdapterTests: XCTestCase {
             StubAdapter(sources: [source("b:2"), source("shared:x")])
         ])
 
-        let sources = try await adapter.discover()
+        let result = try await adapter.discover()
 
-        XCTAssertEqual(sources.count, 3)
-        XCTAssertEqual(Set(sources.map(\.sourceID)), ["a:1", "b:2", "shared:x"])
+        XCTAssertEqual(result.sources.count, 3)
+        XCTAssertEqual(Set(result.sources.map(\.sourceID)), ["a:1", "b:2", "shared:x"])
+        XCTAssertTrue(result.failures.isEmpty)
     }
 
     func testErrorIsolationKeepsOtherAdaptersResults() async throws {
@@ -54,9 +55,26 @@ final class CompositeDiscoveryAdapterTests: XCTestCase {
             StubAdapter(sources: [source("b:2")])
         ])
 
-        let sources = try await adapter.discover()
+        let result = try await adapter.discover()
 
-        XCTAssertEqual(sources.map(\.sourceID), ["b:2"])
+        XCTAssertEqual(result.sources.map(\.sourceID), ["b:2"])
+        XCTAssertEqual(result.failures, [.toolUnavailable("broken")])
+    }
+
+    func testMixedFailuresAndSuccessesAreSurfaced() async throws {
+        let adapter = CompositeDiscoveryAdapter(adapters: [
+            StubAdapter(sources: [source("a:1")], error: .toolUnavailable("symmemory")),
+            StubAdapter(sources: [source("b:2")], error: .toolUnavailable("symskills")),
+            StubAdapter(sources: [source("c:3")])
+        ])
+
+        let result = try await adapter.discover()
+
+        XCTAssertEqual(result.sources.map(\.sourceID), ["c:3"])
+        XCTAssertEqual(
+            result.failures,
+            [.toolUnavailable("symmemory"), .toolUnavailable("symskills")]
+        )
     }
 
     func testAllAdaptersEmptyReturnsEmpty() async throws {
@@ -65,16 +83,18 @@ final class CompositeDiscoveryAdapterTests: XCTestCase {
             StubAdapter(sources: [])
         ])
 
-        let sources = try await adapter.discover()
+        let result = try await adapter.discover()
 
-        XCTAssertTrue(sources.isEmpty)
+        XCTAssertTrue(result.sources.isEmpty)
+        XCTAssertTrue(result.failures.isEmpty)
     }
 
     func testEmptyAdapterListReturnsEmpty() async throws {
         let adapter = CompositeDiscoveryAdapter(adapters: [])
 
-        let sources = try await adapter.discover()
+        let result = try await adapter.discover()
 
-        XCTAssertTrue(sources.isEmpty)
+        XCTAssertTrue(result.sources.isEmpty)
+        XCTAssertTrue(result.failures.isEmpty)
     }
 }

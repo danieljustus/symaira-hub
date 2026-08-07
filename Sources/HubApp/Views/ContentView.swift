@@ -52,7 +52,7 @@ struct ContentView: View {
                 SymairaTheme.bgDark.ignoresSafeArea()
                 AmbientGlows()
                 if state.selectedToolID == "__source_inspector__" {
-                    SourceInspectorView()
+                    SourceInspectorView(model: SourceInspectorModel(state: state))
                 } else if let row = state.selectedRow {
                     ToolDetailView(row: row)
                 } else {

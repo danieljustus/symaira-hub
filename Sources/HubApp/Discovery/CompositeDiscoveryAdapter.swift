@@ -9,25 +9,32 @@ actor CompositeDiscoveryAdapter: SourceDiscoveryAdapter {
         self.adapters = adapters
     }
 
-    func discover() async throws -> [DiscoveredSource] {
+    func discover() async throws -> DiscoveryResult {
         var allSources: [DiscoveredSource] = []
         var seenIDs = Set<String>()
+        var failures: [DiscoveryError] = []
 
         for adapter in adapters {
             do {
-                let sources = try await adapter.discover()
-                for source in sources
+                let result = try await adapter.discover()
+                for source in result.sources
                     where seenIDs.insert(source.sourceID).inserted {
                         allSources.append(source)
                 }
+                // A conformer may report failures without throwing
+                // (e.g. a wrapped aggregate); carry them through.
+                failures.append(contentsOf: result.failures)
+            } catch let error as DiscoveryError {
+                // One adapter failing doesn't block the others. The failure
+                // is returned alongside the results so the UI can surface a
+                // per-provider hint instead of a silent gap.
+                failures.append(error)
             } catch {
-                // One adapter failing doesn't block others.
-                // Errors are surfaced through HubState.sourceScanError
-                // when ALL adapters fail — handled in refreshSources().
-                continue
+                // Defensive: any non-DiscoveryError is still surfaced.
+                failures.append(.invalidResponse(error.localizedDescription))
             }
         }
 
-        return allSources
+        return DiscoveryResult(sources: allSources, failures: failures)
     }
 }
